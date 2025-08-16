@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>simple Calculator</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        .calculator {
+            background: lab(100% 0.01 -0.01);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            width: 300px;
+        }
+        #display {
+            width: 100%;
+            height: 50px;
+            background: #49c3d3;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            padding: 8px;
+            font-size: 20px;
+            text-align: right;
+            box-sizing: border-box;
+        }
+        #history {
+            width: 100%;
+            height: 20px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            text-align: right;
+            color: #666;
+        }
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+        button {
+            padding: 12px;
+            font-size: 16px;
+            border: none;
+            border-radius: 4px;
+            background: #e0e0e0;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #d0d0d0;
+        }
+        .operator {
+            background: #ff9500;
+            color: #fff;
+        }
+        .operator:hover {
+            background: #e68a00;
+        }
+        .equals {
+            backgr
+ound: #28a745;
+            color: #fff;
+        }
+        .equals:hover {
+            background: #218838;
+        }
+        .clear {
+            background: #dc3545;
+            color: #fff;
+        }
+        .clear:hover {
+            background: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <div id="history"></div>
+        <input type="text" id="display" readonly value="0">
+        <div class="buttons">
+            <button class="clear" onclick="clearDisplay()">C</button>
+            <button onclick="appendToDisplay('(')">(</button>
+            <button onclick="appendToDisplay(')')">)</button>
+            <button class="operator" onclick="appendToDisplay('/')">/</button>
+            <button onclick="appendToDisplay('7')">7</button>
+            <button onclick="appendToDisplay('8')">8</button>
+            <button onclick="appendToDisplay('9')">9</button>
+            <button class="operator" onclick="appendToDisplay('*')">×</button>
+            <button onclick="appendToDisplay('4')">4</button>
+            <button onclick="appendToDisplay('5')">5</button>
+            <button onclick="appendToDisplay('6')">6</button>
+            <button class="operator" onclick="appendToDisplay('-')">-</button>
+            <button onclick="appendToDisplay('1')">1</button>
+            <button onclick="appendToDisplay('2')">2</button>
+            <button onclick="appendToDisplay('3')">3</button>
+            <button class="operator" onclick="appendToDisplay('+')">+</button>
+            <button onclick="appendToDisplay('0')">0</button>
+            <button onclick="appendToDisplay('.')">.</button>
+            <button onclick="backspace()">←</button>
+            <button class="equals" onclick="calculate()">=</button>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+    <script>
+        let pyodide;
+        let history = [];
+        async function init() {
+            pyodide = await loadPyodide();
+            document.getElementById('display').value = '0';
+        }
+        function appendToDisplay(value) {
+            const display = document.getElementById('display');
+            display.value = display.value === '0' && value !== '.' ? value : display.value + value;
+        }
+        function clearDisplay() {
+            document.getElementById('display').value = '0';
+            document.getElementById('history').textContent = '';
+        }
+        function backspace() {
+            const display = document.getElementById('display');
+            display.value = display.value.slice(0, -1) || '0';
+        }
+        async function calculate() {
+            const display = document.getElementById('display');
+            const expression = display.value.replace(/×/g, '*');
+            try {
+                const result = await pyodide.runPython(`
+                    def safe_eval(expr):
+                        try:
+                            return eval(expr, {"__builtins__": {}})
+                        except:
+                            return "Error"
+                    safe_eval("${expression}")
+                `);
+                if (result === "Error") {
+                    display.value = "Error";
+                } else {
+                    history.push(`${expression} = ${result}`);
+                    document.getElementById('history').textContent = history[history.length - 1];
+                    display.value = result;
+                }
+            } catch {
+                display.value = "Error";
+            }
+        }
+        document.addEventListener('keydown', (event) => {
+            const key = event.key;
+            if (/[0-9+\-*/.()]/.test(key)) {
+                appendToDisplay(key === '*' ? '×' : key);
+            } else if (key === 'Enter') {
+                calculate();
+            } else if (key === 'Backspace') {
+                backspace();
+            } else if (key === 'Escape') {
+                clearDisplay();
+            }
+        });
+        init();
+    </script>
+</body>
+</html>
